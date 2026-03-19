@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+sqlalchemy
+chromadb
+sentence-transformers
+openai
+duckduckgo-search
+pydantic
