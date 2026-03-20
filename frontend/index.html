@@ -3,32 +3,87 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Personal AI Assistant</title>
-    <link rel="stylesheet" href="/static/style.css" />
+    <title>AI Agent</title>
+    <link rel="stylesheet" href="/static/style.css?v=4" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
-    <!-- Markdown Parser Library -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
-    <!-- Settings Modal -->
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button onclick="startNewChat()" class="new-chat-btn">
+          <i class="fas fa-plus"></i> New Chat
+        </button>
+      </div>
+      <div class="sidebar-content" id="conv-list"></div>
+      <div class="sidebar-footer">
+        <button class="icon-btn" onclick="openSettingsModal()">
+          <i class="fas fa-cog"></i> Settings
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+      <header>
+        <button class="icon-btn" onclick="toggleSidebar()">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>AI Agent</h1>
+        <!-- User Login Button (Top Right) -->
+        <button class="user-btn" onclick="openUserModal()">
+          <i class="fas fa-user-circle"></i>
+          <span id="header-username">Guest</span>
+        </button>
+      </header>
+
+      <div id="chatbox">
+        <div class="message ai welcome">Hello! I am your AI Agent.</div>
+      </div>
+
+      <div class="input-area">
+        <div class="input-wrapper">
+          <input type="text" id="user-input" placeholder="Ask anything..." />
+          <label class="switch" title="Web Search">
+            <input type="checkbox" id="search-toggle" checked />
+            <span class="slider"></span>
+          </label>
+          <button onclick="sendMessage()">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 1: User Login (Identity) -->
+    <div id="user-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeUserModal()">&times;</span>
+        <h2><i class="fas fa-user"></i> User Identity</h2>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px">
+          Enter your name to save chat history. Leave empty for Guest mode.
+        </p>
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="user-id" placeholder="e.g., Vinayak" />
+        </div>
+        <button onclick="saveUser()" class="save-btn">Save Identity</button>
+      </div>
+    </div>
+
+    <!-- Modal 2: Settings (API Config) -->
     <div id="settings-modal" class="modal">
       <div class="modal-content">
-        <span class="close-btn" onclick="closeSettings()">&times;</span>
-        <h2><i class="fas fa-sliders-h"></i> Settings</h2>
-
-        <div class="form-group">
-          <label>Your Name (For Memory)</label>
-          <input type="text" id="user-id" placeholder="e.g., Alice" />
-        </div>
-
+        <span class="close-btn" onclick="closeSettingsModal()">&times;</span>
+        <h2><i class="fas fa-robot"></i> AI Configuration</h2>
         <div class="form-group">
           <label>OpenRouter API Key</label>
           <input type="password" id="api-key" placeholder="sk-or-v1-..." />
         </div>
-
         <div class="form-group">
           <label>Select Model</label>
           <select id="model-select">
@@ -38,56 +93,12 @@
             <option value="meta-llama/llama-3-8b-instruct:free">
               Llama 3 8B (Free)
             </option>
-            <option value="google/gemma-7b-it:free">Gemma 7B (Free)</option>
-            <option value="custom">Custom Model ID</option>
           </select>
-          <input
-            type="text"
-            id="custom-model"
-            placeholder="Enter Custom Model ID"
-            style="display: none; margin-top: 8px"
-          />
         </div>
-
-        <button onclick="saveSettings()" class="save-btn">
-          Save & Continue
-        </button>
+        <button onclick="saveSettings()" class="save-btn">Save Config</button>
       </div>
     </div>
 
-    <!-- Main App -->
-    <div class="container">
-      <header>
-        <div class="logo-area">
-          <i class="fas fa-robot"></i>
-          <h1>AI Assistant</h1>
-        </div>
-        <button class="icon-btn" onclick="openSettings()" title="Settings">
-          <i class="fas fa-cog"></i>
-        </button>
-      </header>
-
-      <div id="chatbox">
-        <div class="message ai welcome">
-          Hello! I am your personal AI assistant. Configure your settings using
-          the <strong>gear icon</strong> above to get started.
-        </div>
-      </div>
-
-      <div class="input-area">
-        <div class="input-wrapper">
-          <input
-            type="text"
-            id="user-input"
-            placeholder="Type your message here..."
-          />
-          <button onclick="sendMessage()">
-            <i class="fas fa-paper-plane"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <script src="/static/script.js"></script>
+    <script src="/static/script.js?v=4"></script>
   </body>
 </html>

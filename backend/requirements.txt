@@ -5,4 +5,4 @@ chromadb
 sentence-transformers
 openai
 duckduckgo-search
-pydantic
+python-dotenv

@@ -1,108 +1,120 @@
-// Initialize on load
+let currentConversationId = null;
+let userId = "Guest";
+
 document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
   checkSetup();
+  loadConversations();
 });
 
-// --- Settings Logic ---
-function openSettings() {
-  document.getElementById("settings-modal").style.display = "block";
+// --- Sidebar Logic ---
+function loadConversations() {
+  fetch(`/api/conversations/${userId}`)
+    .then((res) => res.json())
+    .then((data) => {
+      const list = document.getElementById("conv-list");
+      list.innerHTML = "";
+      if (userId === "Guest") {
+        list.innerHTML =
+          '<div style="padding:15px; text-align:center; color:#666; font-size:12px;">Login to save history</div>';
+        return;
+      }
+      data.forEach((c) => {
+        const div = document.createElement("div");
+        div.className = `conv-item ${c.id === currentConversationId ? "active" : ""}`;
+        div.innerText = c.title;
+        div.onclick = () => loadChat(c.id);
+        list.appendChild(div);
+      });
+    });
 }
 
-function closeSettings() {
-  document.getElementById("settings-modal").style.display = "none";
+function startNewChat() {
+  return fetch("/api/conversations/new", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      currentConversationId = data.conversation_id;
+      document.getElementById("chatbox").innerHTML = "";
+      closeSidebar(); // Auto close sidebar on new chat
+    });
 }
 
-function loadSettings() {
+function loadChat(convId) {
+  currentConversationId = convId;
+  document.getElementById("chatbox").innerHTML =
+    '<div class="message ai"><i>Loading...</i></div>';
+  loadConversations();
+  closeSidebar(); // Auto close sidebar on load
+
+  fetch(`/api/history/${convId}`)
+    .then((res) => res.json())
+    .then((history) => {
+      const chatbox = document.getElementById("chatbox");
+      chatbox.innerHTML = "";
+      history.forEach((msg) => {
+        const className = msg.role === "user" ? "user" : "ai";
+        const content =
+          msg.role === "user" ? msg.content : marked.parse(msg.content);
+        chatbox.innerHTML += `<div class="message ${className}">${content}</div>`;
+      });
+      chatbox.scrollTop = chatbox.scrollHeight;
+    });
+}
+
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("open");
+}
+function closeSidebar() {
+  document.getElementById("sidebar").classList.remove("open");
+}
+
+// --- Modals Logic ---
+function openUserModal() {
+  document.getElementById("user-modal").style.display = "block";
+}
+function closeUserModal() {
+  document.getElementById("user-modal").style.display = "none";
+}
+
+function openSettingsModal() {
+  // Pre-fill settings data
   document.getElementById("api-key").value =
     localStorage.getItem("apiKey") || "";
-  document.getElementById("user-id").value =
-    localStorage.getItem("userId") || "";
   const savedModel =
     localStorage.getItem("model") || "stepfun/step-3.5-flash:free";
-
-  // Handle dropdown
-  const select = document.getElementById("model-select");
-  const customInput = document.getElementById("custom-model");
-
-  // Check if saved model is in standard dropdown
-  let found = false;
-  for (let i = 0; i < select.options.length; i++) {
-    if (select.options[i].value === savedModel) found = true;
-  }
-
-  if (found) {
-    select.value = savedModel;
-  } else {
-    select.value = "custom";
-    customInput.value = savedModel;
-    customInput.style.display = "block";
-  }
+  document.getElementById("model-select").value = savedModel;
+  document.getElementById("settings-modal").style.display = "block";
 }
-
-function saveSettings() {
-  const apiKey = document.getElementById("api-key").value;
-  const userId = document.getElementById("user-id").value;
-  let model = document.getElementById("model-select").value;
-
-  if (model === "custom") {
-    model = document.getElementById("custom-model").value;
-  }
-
-  if (!apiKey) {
-    alert("Please enter an API Key");
-    return;
-  }
-
-  localStorage.setItem("apiKey", apiKey);
-  localStorage.setItem("userId", userId || "Guest");
-  localStorage.setItem("model", model);
-
-  closeSettings();
-  checkSetup();
+function closeSettingsModal() {
+  document.getElementById("settings-modal").style.display = "none";
 }
-
-function checkSetup() {
-  // If no key, force open settings
-  if (!localStorage.getItem("apiKey")) {
-    openSettings();
-  }
-}
-
-// Toggle Custom Model Input
-document.getElementById("model-select").addEventListener("change", (e) => {
-  const customInput = document.getElementById("custom-model");
-  if (e.target.value === "custom") {
-    customInput.style.display = "block";
-  } else {
-    customInput.style.display = "none";
-  }
-});
 
 // --- Chat Logic ---
 async function sendMessage() {
   const input = document.getElementById("user-input");
-  const chatbox = document.getElementById("chatbox");
   const text = input.value.trim();
 
+  if (!currentConversationId) {
+    await startNewChat();
+  }
+
   const apiKey = localStorage.getItem("apiKey");
-  const userId = localStorage.getItem("userId");
   const model = localStorage.getItem("model");
+  const searchEnabled = document.getElementById("search-toggle").checked;
 
   if (!text) return;
   if (!apiKey) {
-    openSettings();
+    openSettingsModal();
     return;
   }
 
-  // UI Update
+  const chatbox = document.getElementById("chatbox");
   chatbox.innerHTML += `<div class="message user">${text}</div>`;
   input.value = "";
-  chatbox.scrollTop = chatbox.scrollHeight;
-
-  // Add "Thinking..." indicator
-  const loaderId = "loader-" + Date.now();
-  chatbox.innerHTML += `<div class="message ai" id="${loaderId}"><i>Thinking...</i></div>`;
   chatbox.scrollTop = chatbox.scrollHeight;
 
   try {
@@ -114,28 +126,96 @@ async function sendMessage() {
         api_key: apiKey,
         user_id: userId,
         model: model,
-        use_search: true, // Enable search by default
+        conversation_id: currentConversationId,
+        use_search: searchEnabled,
       }),
     });
 
     const data = await response.json();
 
-    // Remove loader
-    document.getElementById(loaderId).remove();
-
-    // RENDER MARKDOWN
-    // We use marked.parse() to convert text to HTML
-    const htmlContent = marked.parse(data.reply);
-
-    chatbox.innerHTML += `<div class="message ai">${htmlContent}</div>`;
+    if (response.ok) {
+      const htmlContent = marked.parse(data.reply);
+      chatbox.innerHTML += `<div class="message ai">${htmlContent}</div>`;
+      if (userId !== "Guest") loadConversations();
+    } else {
+      chatbox.innerHTML += `<div class="message ai" style="color:red">Error: ${data.detail || "Unknown error"}</div>`;
+    }
     chatbox.scrollTop = chatbox.scrollHeight;
   } catch (error) {
-    document.getElementById(loaderId).remove();
-    chatbox.innerHTML += `<div class="message ai" style="background:#ffdddd; color:#d8000c;">Error: ${error.message}</div>`;
+    chatbox.innerHTML += `<div class="message ai" style="color:red">Error: ${error.message}</div>`;
   }
 }
 
-// Enter key listener
+// --- Load/Save Logic ---
+function loadSettings() {
+  let savedUser = localStorage.getItem("userId") || "Guest";
+
+  // --- SAFETY CHECK ---
+  // If the userId looks like a model ID (contains '/'), reset it to Guest.
+  // This fixes the corrupted data issue automatically.
+  if (savedUser.includes("/") || savedUser.includes(":")) {
+    console.warn(
+      "Invalid User ID detected (looks like a model string). Resetting to Guest.",
+    );
+    savedUser = "Guest";
+    localStorage.setItem("userId", "Guest");
+  }
+
+  userId = savedUser;
+  document.getElementById("user-id").value =
+    savedUser === "Guest" ? "" : savedUser;
+  updateHeaderUsername();
+}
+function saveUser() {
+  // Get value from the User Modal input
+  let uId = document.getElementById("user-id").value.trim();
+
+  // Prevent saving model-like strings as usernames
+  if (uId.includes("/") || uId.includes(":")) {
+    alert("User ID cannot contain '/' or ':'. Please use a simple name.");
+    return;
+  }
+
+  if (!uId) uId = "Guest";
+
+  localStorage.setItem("userId", uId);
+  userId = uId;
+
+  updateHeaderUsername();
+  closeUserModal();
+
+  // Reset chat state for new user
+  currentConversationId = null;
+  document.getElementById("chatbox").innerHTML = "";
+  loadConversations();
+}
+
+function saveSettings() {
+  const apiKey = document.getElementById("api-key").value;
+  const model = document.getElementById("model-select").value;
+
+  // We ONLY save API configuration here, NOT the user ID.
+  localStorage.setItem("apiKey", apiKey);
+  localStorage.setItem("model", model);
+
+  closeSettingsModal();
+
+  // Optional: Notify user to refresh if API key changed
+  console.log("Configuration Saved.");
+}
+
+function updateHeaderUsername() {
+  const name = userId === "Guest" ? "Guest" : userId;
+  document.getElementById("header-username").innerText = name;
+}
+
+function checkSetup() {
+  if (!localStorage.getItem("apiKey")) {
+    setTimeout(openSettingsModal, 500);
+  }
+}
+
+// Listeners
 document
   .getElementById("user-input")
   .addEventListener("keypress", function (event) {
