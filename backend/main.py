@@ -1,6 +1,85 @@
-# ... (imports stay the same)
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from openai import OpenAI
+from datetime import datetime
+import uuid
+import json
+from .database import init_db, SessionLocal, Conversation, ChatHistory, get_recent_history
+from .memory import add_to_ltm, query_ltm
+from .tools import search_internet
 
-# --- Helper: Agent Reasoning Step ---
+# --- App Initialization ---
+app = FastAPI()
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
+# Mount static files (CSS/JS)
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+# --- Models ---
+class ChatRequest(BaseModel):
+    message: str
+    api_key: str
+    model: str
+    user_id: str
+    conversation_id: str
+    use_search: bool = False
+
+class NewConvRequest(BaseModel):
+    user_id: str
+
+# --- Routes ---
+
+# 1. Serve Frontend HTML
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    with open("frontend/index.html") as f:
+        return f.read()
+
+# 2. Create New Conversation
+@app.post("/api/conversations/new")
+async def new_conversation(req: NewConvRequest):
+    if req.user_id == "Guest":
+        return {"conversation_id": "guest-session-" + str(uuid.uuid4())}
+        
+    db = SessionLocal()
+    conv_id = str(uuid.uuid4())
+    new_conv = Conversation(id=conv_id, user_id=req.user_id, title="New Chat")
+    db.add(new_conv)
+    db.commit()
+    db.close()
+    return {"conversation_id": conv_id}
+
+# 3. List Conversations
+@app.get("/api/conversations/{user_id}")
+async def get_conversations(user_id: str):
+    if user_id == "Guest":
+        return []
+    
+    db = SessionLocal()
+    convs = db.query(Conversation).filter(Conversation.user_id == user_id).order_by(Conversation.created_at.desc()).all()
+    result = [{"id": c.id, "title": c.title} for c in convs]
+    db.close()
+    return result
+
+# 4. Get History
+@app.get("/api/history/{conversation_id}")
+async def get_history(conversation_id: str):
+    if "guest-session" in conversation_id:
+        return []
+
+    db = SessionLocal()
+    msgs = db.query(ChatHistory).filter(ChatHistory.conversation_id == conversation_id).order_by(ChatHistory.timestamp).all()
+    result = [{"role": m.role, "content": m.content} for m in msgs]
+    db.close()
+    return result
+
+# --- Agent Logic Functions ---
+
 def agent_reason(client, model, user_query, chat_history):
     """
     Asks the LLM to decide if a search is needed.
@@ -32,18 +111,18 @@ def agent_reason(client, model, user_query, chat_history):
         
         content = response.choices[0].message.content
         
-        # Clean up potential markdown code blocks
+        # Clean up markdown code blocks if present
         if "```json" in content: content = content.split("```json")[1].split("```")[0]
-        if "```" in content: content = content.split("```")[1].split("```")[0]
+        elif "```" in content: content = content.split("```")[1].split("```")[0]
         
         decision = json.loads(content.strip())
         return decision.get("needs_search", False), decision.get("query", user_query)
         
     except Exception as e:
-        print(f"[AGENT REASONING ERROR] {e} - Defaulting to NO SEARCH.")
+        print(f"[AGENT REASONING ERROR] {e}")
         return False, ""
 
-# --- Core Endpoint ---
+# 5. Chat Endpoint
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
     if not req.api_key:
@@ -88,17 +167,14 @@ async def chat(req: ChatRequest):
             search_context = "Search completed but found no relevant results."
 
     # 4. FINAL RESPONSE GENERATION
-    # We inject Date/Time first
     system_content = (
         "You are a helpful AI Agent.\n"
         f"Current System Date & Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
     )
 
-    # Inject Memory
     if ltm_context:
         system_content += "### User Memories:\n" + "\n".join(ltm_context) + "\n\n"
 
-    # Inject Search (CRITICAL INSTRUCTIONS)
     if search_context:
         system_content += (
             "### CRITICAL: LIVE INTERNET SEARCH RESULTS\n"

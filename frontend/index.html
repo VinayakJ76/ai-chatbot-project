@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Agent</title>
-    <link rel="stylesheet" href="/static/style.css?v=4" />
+    <link rel="stylesheet" href="/static/style.css" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
@@ -21,28 +21,38 @@
       </div>
       <div class="sidebar-content" id="conv-list"></div>
       <div class="sidebar-footer">
-        <button class="icon-btn" onclick="openSettingsModal()">
+        <button class="settings-btn" onclick="openSettingsModal()">
           <i class="fas fa-cog"></i> Settings
         </button>
       </div>
     </div>
 
-    <!-- Main Container -->
-    <div class="main-container">
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
       <header>
-        <button class="icon-btn" onclick="toggleSidebar()">
-          <i class="fas fa-bars"></i>
-        </button>
-        <h1>AI Agent</h1>
-        <!-- User Login Button (Top Right) -->
-        <button class="user-btn" onclick="openUserModal()">
-          <i class="fas fa-user-circle"></i>
-          <span id="header-username">Guest</span>
-        </button>
+        <div class="header-left">
+          <button class="icon-btn" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
+        <div class="header-center">
+          <h1>AI Agent</h1>
+        </div>
+        <div class="header-right">
+          <button class="user-btn" onclick="openUserModal()">
+            <i class="fas fa-user-circle"></i>
+            <span id="header-username">Guest</span>
+          </button>
+        </div>
       </header>
 
-      <div id="chatbox">
-        <div class="message ai welcome">Hello! I am your AI Agent.</div>
+      <div class="chat-container">
+        <div id="chatbox">
+          <div class="welcome-state">
+            <h2>Hello! I am your AI Agent.</h2>
+            <p>Ask me anything. I have access to real-time internet search.</p>
+          </div>
+        </div>
       </div>
 
       <div class="input-area">
@@ -59,27 +69,24 @@
       </div>
     </div>
 
-    <!-- Modal 1: User Login (Identity) -->
+    <!-- User Modal -->
     <div id="user-modal" class="modal">
       <div class="modal-content">
         <span class="close-btn" onclick="closeUserModal()">&times;</span>
-        <h2><i class="fas fa-user"></i> User Identity</h2>
-        <p style="font-size: 13px; color: #666; margin-bottom: 15px">
-          Enter your name to save chat history. Leave empty for Guest mode.
-        </p>
+        <h2>User Identity</h2>
         <div class="form-group">
           <label>Your Name</label>
-          <input type="text" id="user-id" placeholder="e.g., Vinayak" />
+          <input type="text" id="user-id" placeholder="Enter your name" />
         </div>
-        <button onclick="saveUser()" class="save-btn">Save Identity</button>
+        <button onclick="saveUser()" class="save-btn">Save</button>
       </div>
     </div>
 
-    <!-- Modal 2: Settings (API Config) -->
+    <!-- Settings Modal -->
     <div id="settings-modal" class="modal">
       <div class="modal-content">
         <span class="close-btn" onclick="closeSettingsModal()">&times;</span>
-        <h2><i class="fas fa-robot"></i> AI Configuration</h2>
+        <h2>Configuration</h2>
         <div class="form-group">
           <label>OpenRouter API Key</label>
           <input type="password" id="api-key" placeholder="sk-or-v1-..." />
@@ -93,12 +100,20 @@
             <option value="meta-llama/llama-3-8b-instruct:free">
               Llama 3 8B (Free)
             </option>
+            <option value="custom">Custom Model ID</option>
           </select>
+          <!-- THIS WAS MISSING causing the error -->
+          <input
+            type="text"
+            id="custom-model"
+            placeholder="Enter Custom Model ID"
+            style="display: none; margin-top: 8px"
+          />
         </div>
-        <button onclick="saveSettings()" class="save-btn">Save Config</button>
+        <button onclick="saveSettings()" class="save-btn">Save</button>
       </div>
     </div>
 
-    <script src="/static/script.js?v=4"></script>
+    <script src="/static/script.js"></script>
   </body>
 </html>

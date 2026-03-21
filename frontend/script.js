@@ -5,6 +5,22 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
   checkSetup();
   loadConversations();
+
+  // Listener for the custom model dropdown toggle
+  const modelSelect = document.getElementById("model-select");
+  if (modelSelect) {
+    modelSelect.addEventListener("change", (e) => {
+      const customInput = document.getElementById("custom-model");
+      if (customInput) {
+        // Safety check
+        if (e.target.value === "custom") {
+          customInput.style.display = "block";
+        } else {
+          customInput.style.display = "none";
+        }
+      }
+    });
+  }
 });
 
 // --- Sidebar Logic ---
@@ -39,7 +55,7 @@ function startNewChat() {
     .then((data) => {
       currentConversationId = data.conversation_id;
       document.getElementById("chatbox").innerHTML = "";
-      closeSidebar(); // Auto close sidebar on new chat
+      closeSidebar();
     });
 }
 
@@ -48,7 +64,7 @@ function loadChat(convId) {
   document.getElementById("chatbox").innerHTML =
     '<div class="message ai"><i>Loading...</i></div>';
   loadConversations();
-  closeSidebar(); // Auto close sidebar on load
+  closeSidebar();
 
   fetch(`/api/history/${convId}`)
     .then((res) => res.json())
@@ -81,12 +97,33 @@ function closeUserModal() {
 }
 
 function openSettingsModal() {
-  // Pre-fill settings data
   document.getElementById("api-key").value =
     localStorage.getItem("apiKey") || "";
+
   const savedModel =
     localStorage.getItem("model") || "stepfun/step-3.5-flash:free";
-  document.getElementById("model-select").value = savedModel;
+  const select = document.getElementById("model-select");
+  const customInput = document.getElementById("custom-model");
+
+  let found = false;
+  if (select) {
+    for (let i = 0; i < select.options.length; i++) {
+      if (select.options[i].value === savedModel) {
+        select.value = savedModel;
+        found = true;
+        break;
+      }
+    }
+  }
+
+  if (!found && customInput) {
+    select.value = "custom";
+    customInput.value = savedModel;
+    customInput.style.display = "block";
+  } else if (customInput) {
+    customInput.style.display = "none";
+  }
+
   document.getElementById("settings-modal").style.display = "block";
 }
 function closeSettingsModal() {
@@ -98,12 +135,16 @@ async function sendMessage() {
   const input = document.getElementById("user-input");
   const text = input.value.trim();
 
+  // Clear welcome message
+  const welcomeDiv = document.querySelector(".welcome-state");
+  if (welcomeDiv) welcomeDiv.remove();
+
   if (!currentConversationId) {
     await startNewChat();
   }
 
   const apiKey = localStorage.getItem("apiKey");
-  const model = localStorage.getItem("model");
+  let model = localStorage.getItem("model") || "stepfun/step-3.5-flash:free";
   const searchEnabled = document.getElementById("search-toggle").checked;
 
   if (!text) return;
@@ -130,15 +171,13 @@ async function sendMessage() {
         use_search: searchEnabled,
       }),
     });
-
     const data = await response.json();
-
     if (response.ok) {
       const htmlContent = marked.parse(data.reply);
       chatbox.innerHTML += `<div class="message ai">${htmlContent}</div>`;
       if (userId !== "Guest") loadConversations();
     } else {
-      chatbox.innerHTML += `<div class="message ai" style="color:red">Error: ${data.detail || "Unknown error"}</div>`;
+      chatbox.innerHTML += `<div class="message ai" style="color:red">Error: ${data.detail || "Unknown"}</div>`;
     }
     chatbox.scrollTop = chatbox.scrollHeight;
   } catch (error) {
@@ -149,42 +188,27 @@ async function sendMessage() {
 // --- Load/Save Logic ---
 function loadSettings() {
   let savedUser = localStorage.getItem("userId") || "Guest";
-
-  // --- SAFETY CHECK ---
-  // If the userId looks like a model ID (contains '/'), reset it to Guest.
-  // This fixes the corrupted data issue automatically.
   if (savedUser.includes("/") || savedUser.includes(":")) {
-    console.warn(
-      "Invalid User ID detected (looks like a model string). Resetting to Guest.",
-    );
     savedUser = "Guest";
     localStorage.setItem("userId", "Guest");
   }
-
   userId = savedUser;
   document.getElementById("user-id").value =
     savedUser === "Guest" ? "" : savedUser;
   updateHeaderUsername();
 }
-function saveUser() {
-  // Get value from the User Modal input
-  let uId = document.getElementById("user-id").value.trim();
 
-  // Prevent saving model-like strings as usernames
+function saveUser() {
+  let uId = document.getElementById("user-id").value.trim();
   if (uId.includes("/") || uId.includes(":")) {
-    alert("User ID cannot contain '/' or ':'. Please use a simple name.");
+    alert("Invalid name.");
     return;
   }
-
   if (!uId) uId = "Guest";
-
   localStorage.setItem("userId", uId);
   userId = uId;
-
   updateHeaderUsername();
   closeUserModal();
-
-  // Reset chat state for new user
   currentConversationId = null;
   document.getElementById("chatbox").innerHTML = "";
   loadConversations();
@@ -192,32 +216,25 @@ function saveUser() {
 
 function saveSettings() {
   const apiKey = document.getElementById("api-key").value;
-  const model = document.getElementById("model-select").value;
+  let model = document.getElementById("model-select").value;
+  if (model === "custom") {
+    model = document.getElementById("custom-model").value;
+  }
 
-  // We ONLY save API configuration here, NOT the user ID.
   localStorage.setItem("apiKey", apiKey);
   localStorage.setItem("model", model);
-
   closeSettingsModal();
-
-  // Optional: Notify user to refresh if API key changed
-  console.log("Configuration Saved.");
 }
 
 function updateHeaderUsername() {
-  const name = userId === "Guest" ? "Guest" : userId;
-  document.getElementById("header-username").innerText = name;
+  document.getElementById("header-username").innerText =
+    userId === "Guest" ? "Guest" : userId;
 }
-
 function checkSetup() {
-  if (!localStorage.getItem("apiKey")) {
-    setTimeout(openSettingsModal, 500);
-  }
+  if (!localStorage.getItem("apiKey")) setTimeout(openSettingsModal, 500);
 }
 
-// Listeners
-document
-  .getElementById("user-input")
-  .addEventListener("keypress", function (event) {
-    if (event.key === "Enter") sendMessage();
-  });
+// Enter key listener
+document.getElementById("user-input").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
