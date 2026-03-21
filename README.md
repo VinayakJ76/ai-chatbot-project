@@ -6,7 +6,7 @@ An open-source, self-hosted AI Agent application with a clean, modern dark UI. T
 
 ## ✨ Key Features
 
-1.  **Real-Time Internet Access**: 
+1.  **Real-Time Internet Access**:
     - The agent autonomously decides when to search the internet using DuckDuckGo.
     - Provides up-to-date answers on news, weather, and current events.
     - Includes a "Safety Net" keyword trigger to force search for queries containing words like "latest", "news", or "today".
@@ -29,19 +29,21 @@ An open-source, self-hosted AI Agent application with a clean, modern dark UI. T
 
 ## 🏗️ Architecture Flow
 
-User Input -> [FastAPI Backend] 
-   -> 1. Memory Retrieval (ChromaDB + SQLite) 
-   -> 2. Agent Reasoning (Decide Search?) 
-   -> 3. Tool Execution (DuckDuckGo) 
-   -> 4. Final Response Generation 
-   -> 5. Storage (Save History) 
+```text
+User Input -> [FastAPI Backend]
+   -> 1. Memory Retrieval (ChromaDB + SQLite)
+   -> 2. Agent Reasoning (Decide Search?)
+   -> 3. Tool Execution (DuckDuckGo)
+   -> 4. Final Response Generation
+   -> 5. Storage (Save History)
    -> Response to User
+```
 
 ---
 
 ## 📂 Project Structure
 
-``	ext
+```text
 ai-chatbot-project/
 ├── backend/
 │   ├── main.py           # Core Agent Logic
@@ -56,34 +58,36 @@ ai-chatbot-project/
 ├── Dockerfile
 └── README.md
 
+```
+
 🚀 Getting Started
 Prerequisites
 Docker Desktop installed.
 OpenRouter API Key.
+
 1. Build
 
+```bash
 docker build -t ai-agent .
+```
 
 2. Run
 
+```bash
 docker run -p 8000:8000 -v C:\Users\Vin/data:/app/data ai-agent
-
+```
 
 3. Access
-Open browser to http://localhost:8000.
-
+   Open browser to http://localhost:8000.
 
 ⚙️ Configuration
 OpenRouter API Key: Required for AI.
-Model Selection: Choose ``StepFun 3.5 Flash`` (Free) or others.
+Model Selection: Choose `StepFun 3.5 Flash` (Free) or others.
 User Identity: Enter name to save history.
-
 
 🛠️ Troubleshooting
 404 Error on Conversations: Clear Browser Local Storage (F12 -> Application -> Local Storage -> Clear).
-High RAM Usage: Create ``.wslconfig`` file to limit Docker memory to 6GB.
-
-
+High RAM Usage: Create `.wslconfig` file to limit Docker memory to 6GB.
 
 📜 License
 MIT License.
