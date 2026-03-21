@@ -1,8 +1,4 @@
-﻿# “Agentic AI system with tool use + retrieval + external context : ReAct Agent
-
-Based on the ReAct pattern (Reason + Act)
-
-Think → Decide → Use tool → Observe → Repeat
+﻿# AI Agent with Real-Time Internet Access & Hybrid Memory
 
 An open-source, self-hosted AI Agent application with a clean, modern dark UI. This agent leverages the power of OpenRouter LLMs to provide intelligent conversation, real-time internet search capabilities, and persistent memory.
 
@@ -34,16 +30,18 @@ An open-source, self-hosted AI Agent application with a clean, modern dark UI. T
 ## 🏗️ Architecture Flow
 
 ```text
-User Input -> [FastAPI Backend]
-   -> 1. Memory Retrieval (ChromaDB + SQLite)
-   -> 2. Agent Reasoning (Decide Search?)
-   -> 3. Tool Execution (DuckDuckGo)
-   -> 4. Final Response Generation
-   -> 5. Storage (Save History)
-   -> Response to User
+User Query
+   ↓
+Agent decides → Tool needed?
+   ↓
+Execute Tool (Search)
+   ↓
+Observe Result
+   ↓
+Generate Final Answer
 ```
 
----
+## ![Flow](/images/mermaid-diagram.png)
 
 ## 📂 Project Structure
 
