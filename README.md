@@ -1,4 +1,8 @@
-﻿# AI Agent with Real-Time Internet Access & Hybrid Memory
+﻿# “Agentic AI system with tool use + retrieval + external context : ReAct Agent
+
+Based on the ReAct pattern (Reason + Act)
+
+Think → Decide → Use tool → Observe → Repeat
 
 An open-source, self-hosted AI Agent application with a clean, modern dark UI. This agent leverages the power of OpenRouter LLMs to provide intelligent conversation, real-time internet search capabilities, and persistent memory.
 
